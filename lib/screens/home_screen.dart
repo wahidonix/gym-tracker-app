@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import 'daily_log_screen.dart';
 import 'progress_screen.dart';
 import 'user_profile_screen.dart';
@@ -28,11 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Weight Tracker'),
+        title: Text(_getTitleForIndex(_selectedIndex)),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.brightness_6),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
+          ),
+        ],
       ),
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
+      body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -53,5 +61,18 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: _onItemTapped,
       ),
     );
+  }
+
+  String _getTitleForIndex(int index) {
+    switch (index) {
+      case 0:
+        return 'Daily Log';
+      case 1:
+        return 'Progress';
+      case 2:
+        return 'Profile';
+      default:
+        return 'Weight Tracker';
+    }
   }
 }

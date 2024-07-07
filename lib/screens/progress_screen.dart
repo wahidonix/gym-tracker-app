@@ -72,12 +72,24 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
   }
 
-  String _getDateString(double value) {
+  Widget _buildBottomTitleWidgets(double value, TitleMeta meta) {
+    const style = TextStyle(fontSize: 10);
+    Widget text;
     final index = value.toInt();
-    if (index >= 0 && index < _displayedDates.length) {
-      return DateFormat('MMM d').format(_displayedDates[index]);
+
+    if (index == 0 ||
+        index == _displayedWeightData.length - 1 ||
+        index == _displayedWeightData.length ~/ 2) {
+      text = Text(DateFormat('MMM d, yy').format(_displayedDates[index]),
+          style: style);
+    } else {
+      text = const Text('');
     }
-    return '';
+
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      child: text,
+    );
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
@@ -101,127 +113,135 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
   }
 
+  Future<void> _deleteWeightLog(int id) async {
+    await _databaseHelper.deleteWeightLog(id);
+    _loadWeightData(); // Reload data after deletion
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Progress'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.date_range),
-            onPressed: () => _selectDateRange(context),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _startDate != null && _endDate != null
+                    ? '${DateFormat('MMM d, y').format(_startDate!)} - ${DateFormat('MMM d, y').format(_endDate!)}'
+                    : 'No date range selected',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton(
+                onPressed: () => _selectDateRange(context),
+                child: Text('Select Range'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  minimumSize: Size(0, 0),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              _startDate != null && _endDate != null
-                  ? 'Date Range: ${DateFormat('MMM d, y').format(_startDate!)} - ${DateFormat('MMM d, y').format(_endDate!)}'
-                  : 'No date range selected',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _displayedWeightData.isEmpty
-                  ? Center(child: Text('No data available for selected range'))
-                  : LineChart(
-                      LineChartData(
-                        gridData: FlGridData(show: false),
-                        titlesData: FlTitlesData(
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                if (value % 7 == 0 ||
-                                    value == _displayedWeightData.length - 1) {
-                                  return Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      _getDateString(value),
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                  );
-                                }
-                                return Text('');
-                              },
-                              reservedSize: 30,
-                            ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _displayedWeightData.isEmpty
+                ? Center(child: Text('No data available for selected range'))
+                : LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: false),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            interval: 1,
+                            getTitlesWidget: _buildBottomTitleWidgets,
                           ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 40,
-                              getTitlesWidget: (value, meta) {
-                                return Text(
-                                  value.toStringAsFixed(1),
-                                  style: TextStyle(fontSize: 10),
-                                );
-                              },
-                            ),
-                          ),
-                          topTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
                         ),
-                        borderData: FlBorderData(show: true),
-                        minX: 0,
-                        maxX: (_displayedWeightData.length - 1).toDouble(),
-                        minY: _minY,
-                        maxY: _maxY,
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: _displayedWeightData,
-                            isCurved: true,
-                            color: Theme.of(context).primaryColor,
-                            barWidth: 3,
-                            isStrokeCapRound: true,
-                            dotData: FlDotData(show: true),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              color: Theme.of(context)
-                                  .primaryColor
-                                  .withOpacity(0.1),
-                            ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                value.toStringAsFixed(1),
+                                style: TextStyle(fontSize: 10),
+                              );
+                            },
                           ),
-                        ],
+                        ),
+                        topTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
                       ),
+                      borderData: FlBorderData(show: true),
+                      minX: 0,
+                      maxX: (_displayedWeightData.length - 1).toDouble(),
+                      minY: _minY,
+                      maxY: _maxY,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: _displayedWeightData,
+                          isCurved: true,
+                          color: Theme.of(context).primaryColor,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color:
+                                Theme.of(context).primaryColor.withOpacity(0.1),
+                          ),
+                        ),
+                      ],
                     ),
-            ),
+                  ),
           ),
-          Expanded(
-            flex: 3,
-            child: ListView.builder(
-              itemCount: _logs.length,
-              itemBuilder: (context, index) {
-                final log = _logs[index];
-                final date = DateTime.parse(log['date']);
-                if (_startDate != null &&
-                    _endDate != null &&
-                    date.isAfter(_startDate!.subtract(Duration(days: 1))) &&
-                    date.isBefore(_endDate!.add(Duration(days: 1)))) {
-                  final weight = log['weight'].toStringAsFixed(1);
-                  return ListTile(
+        ),
+        Expanded(
+          flex: 3,
+          child: ListView.builder(
+            itemCount: _logs.length,
+            itemBuilder: (context, index) {
+              final log = _logs[index];
+              final date = DateTime.parse(log['date']);
+              if (_startDate != null &&
+                  _endDate != null &&
+                  date.isAfter(_startDate!.subtract(Duration(days: 1))) &&
+                  date.isBefore(_endDate!.add(Duration(days: 1)))) {
+                final weight = log['weight'].toStringAsFixed(1);
+                return Dismissible(
+                  key: Key(log['id'].toString()),
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: 20.0),
+                    child: Icon(Icons.delete, color: Colors.white),
+                  ),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    _deleteWeightLog(log['id']);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Weight log deleted')),
+                    );
+                  },
+                  child: ListTile(
                     title: Text('${DateFormat('MMMM d, y').format(date)}'),
                     trailing: Text('$weight kg',
                         style: TextStyle(fontWeight: FontWeight.bold)),
-                    onTap: () {
-                      // You can add functionality here when a list item is tapped
-                    },
-                  );
-                }
-                return SizedBox.shrink();
-              },
-            ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
