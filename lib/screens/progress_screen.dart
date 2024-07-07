@@ -12,6 +12,7 @@ class ProgressScreen extends StatefulWidget {
 
 class _ProgressScreenState extends State<ProgressScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+  // ignore: unused_field
   List<FlSpot> _allWeightData = [];
   List<FlSpot> _displayedWeightData = [];
   List<Map<String, dynamic>> _logs = [];

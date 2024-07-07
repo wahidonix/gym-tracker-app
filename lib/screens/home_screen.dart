@@ -4,6 +4,7 @@ import '../providers/theme_provider.dart';
 import 'daily_log_screen.dart';
 import 'progress_screen.dart';
 import 'user_profile_screen.dart';
+import 'exercise_tracking_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,9 +16,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  static const List<Widget> _widgetOptions = <Widget>[
+  static List<Widget> _widgetOptions = <Widget>[
     DailyLogScreen(),
     ProgressScreen(),
+    ExerciseTrackingScreen(),
     UserProfileScreen(),
   ];
 
@@ -33,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(_getTitleForIndex(_selectedIndex)),
         actions: [
-          if (_selectedIndex == 2) // Only show settings icon on profile screen
+          if (_selectedIndex == 3) // Only show settings icon on profile screen
             IconButton(
               icon: Icon(Icons.settings),
               onPressed: () {
@@ -47,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType
+            .fixed, // This ensures all items are always visible
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle),
@@ -57,12 +61,17 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Progress',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.fitness_center),
+            label: 'Exercises',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
     );
@@ -75,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return 'Progress';
       case 2:
+        return 'Exercise Tracking';
+      case 3:
         return 'Profile';
       default:
         return 'Weight Tracker';

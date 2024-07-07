@@ -1,3 +1,4 @@
+import 'package:gym_tracker/models/exercise_model.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -19,8 +20,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'fitness_tracker.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createDb,
+      onUpgrade: _upgradeDb,
     );
   }
 
@@ -41,6 +43,54 @@ class DatabaseHelper {
         weight REAL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE exercise_sets(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        date TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE exercises(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        set_id INTEGER,
+        name TEXT,
+        weight REAL,
+        reps INTEGER,
+        negative_reps INTEGER,
+        FOREIGN KEY (set_id) REFERENCES exercise_sets(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE exercise_progress(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        exercise_id INTEGER,
+        date TEXT,
+        weight REAL,
+        reps INTEGER,
+        negative_reps INTEGER,
+        FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+      )
+    ''');
+  }
+
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE exercise_progress(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          exercise_id INTEGER,
+          date TEXT,
+          weight REAL,
+          reps INTEGER,
+          negative_reps INTEGER,
+          FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+        )
+      ''');
+    }
   }
 
   Future<int> insertUserProfile(
@@ -106,6 +156,142 @@ class DatabaseHelper {
       'daily_logs',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<Map<String, dynamic>?> getLastWeightLog() async {
+    Database db = await database;
+    List<Map<String, dynamic>> result = await db.query(
+      'daily_logs',
+      orderBy: 'date DESC',
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentWeightLogs(int days) async {
+    Database db = await database;
+    return await db.query(
+      'daily_logs',
+      orderBy: 'date DESC',
+      limit: days,
+    );
+  }
+
+  Future<int> insertExerciseSet(String name, String date) async {
+    Database db = await database;
+    return await db.insert('exercise_sets', {'name': name, 'date': date});
+  }
+
+  Future<int> insertExercise(
+      int setId, String name, double weight, int reps, int negativeReps) async {
+    Database db = await database;
+    return await db.insert('exercises', {
+      'set_id': setId,
+      'name': name,
+      'weight': weight,
+      'reps': reps,
+      'negative_reps': negativeReps,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getExerciseSets() async {
+    Database db = await database;
+    return await db.query('exercise_sets', orderBy: 'date DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getExercisesForSet(int setId) async {
+    Database db = await database;
+    return await db.query('exercises', where: 'set_id = ?', whereArgs: [setId]);
+  }
+
+  Future<int> updateExercise(
+      int id, String name, double weight, int reps, int negativeReps) async {
+    Database db = await database;
+    return await db.update(
+      'exercises',
+      {
+        'name': name,
+        'weight': weight,
+        'reps': reps,
+        'negative_reps': negativeReps,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteExercise(int id) async {
+    Database db = await database;
+    return await db.delete('exercises', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteExerciseSet(int id) async {
+    Database db = await database;
+    await db.delete('exercises', where: 'set_id = ?', whereArgs: [id]);
+    return await db.delete('exercise_sets', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllExercises() async {
+    Database db = await database;
+    return await db.query('exercises');
+  }
+
+  Future<void> logExerciseProgress(int exerciseId, String date, double weight,
+      int reps, int negativeReps) async {
+    Database db = await database;
+
+    // Check if an entry already exists for this exercise on this date
+    List<Map<String, dynamic>> existing = await db.query(
+      'exercise_progress',
+      where: 'exercise_id = ? AND date = ?',
+      whereArgs: [exerciseId, date],
+    );
+
+    if (existing.isNotEmpty) {
+      // If an entry exists, update it
+      await db.update(
+        'exercise_progress',
+        {
+          'weight': weight,
+          'reps': reps,
+          'negative_reps': negativeReps,
+        },
+        where: 'exercise_id = ? AND date = ?',
+        whereArgs: [exerciseId, date],
+      );
+    } else {
+      // If no entry exists, insert a new one
+      await db.insert(
+        'exercise_progress',
+        {
+          'exercise_id': exerciseId,
+          'date': date,
+          'weight': weight,
+          'reps': reps,
+          'negative_reps': negativeReps,
+        },
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getDailyExercises(String date) async {
+    Database db = await database;
+    return await db.rawQuery('''
+      SELECT e.id, e.name, ep.weight, ep.reps, ep.negative_reps
+      FROM exercises e
+      LEFT JOIN exercise_progress ep ON e.id = ep.exercise_id AND ep.date = ?
+      WHERE ep.id IS NOT NULL
+    ''', [date]);
+  }
+
+  Future<List<Map<String, dynamic>>> getExerciseProgress(int exerciseId) async {
+    Database db = await database;
+    return await db.query(
+      'exercise_progress',
+      where: 'exercise_id = ?',
+      whereArgs: [exerciseId],
+      orderBy: 'date ASC',
     );
   }
 }
