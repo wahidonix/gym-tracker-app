@@ -4,6 +4,7 @@ import '../providers/theme_provider.dart';
 import 'daily_log_screen.dart';
 import 'progress_screen.dart';
 import 'user_profile_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -32,12 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(_getTitleForIndex(_selectedIndex)),
         actions: [
-          IconButton(
-            icon: Icon(Icons.brightness_6),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
+          if (_selectedIndex == 2) // Only show settings icon on profile screen
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsScreen()),
+                );
+              },
+            ),
         ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),

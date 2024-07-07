@@ -15,23 +15,21 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
-          title: 'Weight Tracker',
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
-          themeMode:
-              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          debugShowCheckedModeBanner: false,
+          title: 'Gym Tracker',
+          theme: themeProvider.currentTheme,
           home: FutureBuilder<bool>(
             future: DatabaseHelper().hasUserProfile(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
+                return Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
               } else if (snapshot.hasData && snapshot.data!) {
                 return HomeScreen();
               } else {
