@@ -2,30 +2,31 @@ class ExerciseSet {
   final int? id;
   final String name;
   final String date;
-  final List<Exercise> exercises;
+  final int orderIndex;
 
   ExerciseSet({
     this.id,
     required this.name,
     required this.date,
-    required this.exercises,
+    required this.orderIndex,
   });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'date': date,
-    };
-  }
 
   factory ExerciseSet.fromMap(Map<String, dynamic> map) {
     return ExerciseSet(
       id: map['id'],
       name: map['name'],
       date: map['date'],
-      exercises: [],
+      orderIndex: map['order_index'] ?? 0,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'date': date,
+      'order_index': orderIndex,
+    };
   }
 }
 

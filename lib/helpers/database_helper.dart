@@ -20,7 +20,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'fitness_tracker.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -48,7 +48,8 @@ class DatabaseHelper {
       CREATE TABLE exercise_sets(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
-        date TEXT
+        date TEXT,
+        order_index INTEGER
       )
     ''');
 
@@ -90,6 +91,17 @@ class DatabaseHelper {
           FOREIGN KEY (exercise_id) REFERENCES exercises(id)
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      await db
+          .execute('ALTER TABLE exercise_sets ADD COLUMN order_index INTEGER');
+
+      // Initialize order_index for existing rows
+      var sets = await db.query('exercise_sets', orderBy: 'id ASC');
+      for (int i = 0; i < sets.length; i++) {
+        await db.update('exercise_sets', {'order_index': i},
+            where: 'id = ?', whereArgs: [sets[i]['id']]);
+      }
     }
   }
 
@@ -180,7 +192,14 @@ class DatabaseHelper {
 
   Future<int> insertExerciseSet(String name, String date) async {
     Database db = await database;
-    return await db.insert('exercise_sets', {'name': name, 'date': date});
+    int maxOrder = Sqflite.firstIntValue(
+            await db.rawQuery('SELECT MAX(order_index) FROM exercise_sets')) ??
+        -1;
+    return await db.insert('exercise_sets', {
+      'name': name,
+      'date': date,
+      'order_index': maxOrder + 1,
+    });
   }
 
   Future<int> insertExercise(
@@ -197,7 +216,7 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getExerciseSets() async {
     Database db = await database;
-    return await db.query('exercise_sets', orderBy: 'date DESC');
+    return await db.query('exercise_sets', orderBy: 'order_index ASC');
   }
 
   Future<List<Map<String, dynamic>>> getExercisesForSet(int setId) async {
@@ -289,9 +308,34 @@ class DatabaseHelper {
     Database db = await database;
     return await db.query(
       'exercise_progress',
+      columns: ['date', 'weight', 'reps', 'negative_reps'],
       where: 'exercise_id = ?',
       whereArgs: [exerciseId],
       orderBy: 'date ASC',
+    );
+  }
+
+  Future<void> updateExerciseSetOrder(List<ExerciseSet> sets) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (int i = 0; i < sets.length; i++) {
+        await txn.update(
+          'exercise_sets',
+          {'order_index': i},
+          where: 'id = ?',
+          whereArgs: [sets[i].id],
+        );
+      }
+    });
+  }
+
+  Future<int> renameExerciseSet(int id, String newName) async {
+    Database db = await database;
+    return await db.update(
+      'exercise_sets',
+      {'name': newName},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

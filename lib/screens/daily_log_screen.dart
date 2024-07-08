@@ -82,6 +82,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
       _weightController.clear();
       _loadLastWeight();
       _loadRecentLogs();
+      _loadDailyExercises(); // Reload exercises for the selected date
     }
   }
 
@@ -151,10 +152,6 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Daily Log',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
               SizedBox(height: 16),
               _buildDateSelector(),
               SizedBox(height: 24),
@@ -163,7 +160,7 @@ class _DailyLogScreenState extends State<DailyLogScreen> {
               _buildExerciseLoggingCard(),
               SizedBox(height: 24),
               Text(
-                'Today\'s Exercises',
+                'Exercises for ${DateFormat('MMMM d, y').format(_selectedDate)}',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               SizedBox(height: 8),

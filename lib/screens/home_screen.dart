@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart';
 import 'daily_log_screen.dart';
 import 'progress_screen.dart';
 import 'user_profile_screen.dart';
@@ -70,8 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
+        // selectedItemColor: Theme.of(context).primaryColor,
+        // unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
     );

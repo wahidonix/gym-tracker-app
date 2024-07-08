@@ -135,12 +135,83 @@ class _ExerciseTrackingScreenState extends State<ExerciseTrackingScreen> {
     }
   }
 
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final ExerciseSet item = _exerciseSets.removeAt(oldIndex);
+      _exerciseSets.insert(newIndex, item);
+    });
+    _databaseHelper.updateExerciseSetOrder(_exerciseSets);
+  }
+
+  Future<void> _deleteExerciseSet(ExerciseSet set) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Exercise Set'),
+        content: Text(
+            'Are you sure you want to delete "${set.name}" and all its exercises? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          TextButton(
+            child: Text('Delete'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _databaseHelper.deleteExerciseSet(set.id!);
+      _loadExerciseSets();
+    }
+  }
+
+  Future<void> _renameExerciseSet(ExerciseSet set) async {
+    final newName = await _showRenameDialog(set.name);
+    if (newName != null && newName != set.name) {
+      await _databaseHelper.renameExerciseSet(set.id!, newName);
+      _loadExerciseSets();
+    }
+  }
+
+  Future<String?> _showRenameDialog(String currentName) async {
+    String? newName = currentName;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Rename Exercise Set'),
+        content: TextField(
+          autofocus: true,
+          decoration: InputDecoration(hintText: "Enter new name"),
+          onChanged: (value) {
+            newName = value;
+          },
+          controller: TextEditingController(text: currentName),
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: Text('Rename'),
+            onPressed: () => Navigator.of(context).pop(newName),
+          ),
+        ],
+      ),
+    );
+    return newName != currentName ? newName : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Exercise Tracking'),
-      ),
       body: Column(
         children: [
           Padding(
@@ -155,17 +226,41 @@ class _ExerciseTrackingScreenState extends State<ExerciseTrackingScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
+            child: ReorderableListView.builder(
               itemCount: _exerciseSets.length,
               itemBuilder: (context, index) {
                 final set = _exerciseSets[index];
-                return ListTile(
-                  title: Text(set.name),
-                  subtitle: Text(
-                      DateFormat('MMMM d, y').format(DateTime.parse(set.date))),
-                  onTap: () => _showExerciseListDialog(set),
+                return Dismissible(
+                  key: Key(set.id.toString()),
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: 20),
+                    child: Icon(Icons.delete, color: Colors.white),
+                  ),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    _deleteExerciseSet(set);
+                  },
+                  child: ListTile(
+                    title: Text(set.name),
+                    subtitle: Text(DateFormat('MMMM d, y')
+                        .format(DateTime.parse(set.date))),
+                    onTap: () => _showExerciseListDialog(set),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () => _renameExerciseSet(set),
+                        ),
+                        Icon(Icons.drag_handle),
+                      ],
+                    ),
+                  ),
                 );
               },
+              onReorder: _onReorder,
             ),
           ),
         ],
