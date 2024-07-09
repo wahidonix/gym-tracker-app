@@ -58,9 +58,6 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         set_id INTEGER,
         name TEXT,
-        weight REAL,
-        reps INTEGER,
-        negative_reps INTEGER,
         FOREIGN KEY (set_id) REFERENCES exercise_sets(id)
       )
     ''');
@@ -202,15 +199,11 @@ class DatabaseHelper {
     });
   }
 
-  Future<int> insertExercise(
-      int setId, String name, double weight, int reps, int negativeReps) async {
+  Future<int> insertExercise(int setId, String name) async {
     Database db = await database;
     return await db.insert('exercises', {
       'set_id': setId,
       'name': name,
-      'weight': weight,
-      'reps': reps,
-      'negative_reps': negativeReps,
     });
   }
 
@@ -224,17 +217,11 @@ class DatabaseHelper {
     return await db.query('exercises', where: 'set_id = ?', whereArgs: [setId]);
   }
 
-  Future<int> updateExercise(
-      int id, String name, double weight, int reps, int negativeReps) async {
+  Future<int> updateExercise(int id, String name) async {
     Database db = await database;
     return await db.update(
       'exercises',
-      {
-        'name': name,
-        'weight': weight,
-        'reps': reps,
-        'negative_reps': negativeReps,
-      },
+      {'name': name},
       where: 'id = ?',
       whereArgs: [id],
     );

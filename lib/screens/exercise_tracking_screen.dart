@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/models/exercise_model.dart';
-import 'package:gym_tracker/widgets/exercise_dialog.dart';
 import '../helpers/database_helper.dart';
 import 'exercise_detail_screen.dart';
 import 'package:intl/intl.dart';
@@ -118,21 +117,39 @@ class _ExerciseTrackingScreenState extends State<ExerciseTrackingScreen> {
   }
 
   Future<void> _addExercise(ExerciseSet set) async {
-    final exercise = await showDialog<Exercise>(
-      context: context,
-      builder: (context) => ExerciseDialog(),
-    );
-
-    if (exercise != null) {
-      await _databaseHelper.insertExercise(
-        set.id!,
-        exercise.name,
-        exercise.weight,
-        exercise.reps,
-        exercise.negativeReps,
-      );
+    final exerciseName = await _showAddExerciseDialog();
+    if (exerciseName != null) {
+      await _databaseHelper.insertExercise(set.id!, exerciseName);
       _loadExerciseSets();
     }
+  }
+
+  Future<String?> _showAddExerciseDialog() async {
+    String? name;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add Exercise'),
+        content: TextField(
+          autofocus: true,
+          decoration: InputDecoration(hintText: "Enter exercise name"),
+          onChanged: (value) {
+            name = value;
+          },
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+            child: Text('Add'),
+            onPressed: () => Navigator.of(context).pop(name),
+          ),
+        ],
+      ),
+    );
+    return name;
   }
 
   void _onReorder(int oldIndex, int newIndex) {
@@ -168,8 +185,10 @@ class _ExerciseTrackingScreenState extends State<ExerciseTrackingScreen> {
 
     if (confirmed == true) {
       await _databaseHelper.deleteExerciseSet(set.id!);
-      _loadExerciseSets();
     }
+
+    // Always reload the exercise sets, whether deletion was confirmed or not
+    _loadExerciseSets();
   }
 
   Future<void> _renameExerciseSet(ExerciseSet set) async {
@@ -239,8 +258,9 @@ class _ExerciseTrackingScreenState extends State<ExerciseTrackingScreen> {
                     child: Icon(Icons.delete, color: Colors.white),
                   ),
                   direction: DismissDirection.endToStart,
-                  onDismissed: (direction) {
-                    _deleteExerciseSet(set);
+                  confirmDismiss: (direction) async {
+                    await _deleteExerciseSet(set);
+                    return false; // Always return false to prevent automatic dismissal
                   },
                   child: ListTile(
                     title: Text(set.name),
